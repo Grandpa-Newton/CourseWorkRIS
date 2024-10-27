@@ -3,7 +3,9 @@ using System.Net;
 using System.Net.Sockets;
 using System.Windows;
 using System.Drawing;
+using System.Drawing.Imaging;
 using System.IO;
+using System.Windows.Media.Imaging;
 
 namespace ImageProcessor
 {
@@ -13,12 +15,12 @@ namespace ImageProcessor
     public partial class MainWindow : Window
     {
         private Socket _udpSocket;
-        Image _currentImage;
+        private Image _currentImage;
         public MainWindow()
         {
             InitializeComponent();
             
-            _udpSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            _udpSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
         }
 
         private void SendMessage()
@@ -33,7 +35,39 @@ namespace ImageProcessor
             _udpSocket.Connect(new IPEndPoint(IPAddress.Parse(IpTextBox.Text), 8080));
 
             _udpSocket.Send(data);
+
+            ReceiveImage();
+        }
+
+        private void ReceiveImage()
+        {
+            byte[] buffer = new byte[65535];
             
+            EndPoint remoteEndPoint = new IPEndPoint(IPAddress.Any, 0);
+            int receivedBytes = _udpSocket.ReceiveFrom(buffer, ref remoteEndPoint);
+
+            using (MemoryStream ms = new MemoryStream(buffer, 0, receivedBytes))
+            {
+                Image processedImage = Image.FromStream(ms);
+                // Сохраните или отобразите обработанное изображение
+                //processedImage.Save("processed_image.jpg");
+                //MessageBox.Show("Обработанное изображение получено и сохранено как processed_image.jpg");
+                processedImage.Save(ms, ImageFormat.Png);
+                ms.Position = 0;
+
+                var bitmapImage = new BitmapImage();
+                bitmapImage.BeginInit();
+                bitmapImage.StreamSource = ms;
+                bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
+                bitmapImage.EndInit();
+
+                ShowImage(bitmapImage);
+            }
+        }
+
+        private void ShowImage(BitmapImage bitmapImage)
+        {
+            ImageToSend.Source = bitmapImage;
         }
 
         private void SendMessageButton_Click(object sender, RoutedEventArgs e)

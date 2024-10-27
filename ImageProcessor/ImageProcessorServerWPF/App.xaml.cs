@@ -2,7 +2,7 @@
 using System.Data;
 using System.Windows;
 
-namespace ImageProcessorServer;
+namespace ImageProcessorServerWPF;
 
 /// <summary>
 /// Interaction logic for App.xaml

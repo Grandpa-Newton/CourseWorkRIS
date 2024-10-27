@@ -6,7 +6,7 @@ using System.Drawing;
 using System.Windows.Media.Imaging;
 using System.Drawing.Imaging;
 
-namespace ImageProcessorServer
+namespace ImageProcessorServerWPF
 {
     /// <summary>
     /// Interaction logic for MainWindow.xaml

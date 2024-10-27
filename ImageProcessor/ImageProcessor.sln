@@ -4,6 +4,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImageProcessor", "ImageProc
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImageProcessorServerWPF", "ImageProcessorServerWPF\ImageProcessorServerWPF.csproj", "{958A6ECC-478E-455B-9BEA-8AAB2395E6B9}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImageProcessorServer", "ImageProcessorServer\ImageProcessorServer.csproj", "{C79056FA-B620-4FE3-A690-39BC13AA7726}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -18,5 +20,9 @@ Global
 		{958A6ECC-478E-455B-9BEA-8AAB2395E6B9}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{958A6ECC-478E-455B-9BEA-8AAB2395E6B9}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{958A6ECC-478E-455B-9BEA-8AAB2395E6B9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C79056FA-B620-4FE3-A690-39BC13AA7726}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C79056FA-B620-4FE3-A690-39BC13AA7726}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C79056FA-B620-4FE3-A690-39BC13AA7726}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C79056FA-B620-4FE3-A690-39BC13AA7726}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
