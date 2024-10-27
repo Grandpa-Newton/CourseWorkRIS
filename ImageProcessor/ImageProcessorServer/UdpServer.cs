@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Net;
@@ -15,7 +16,7 @@ public class UdpServer
         _server = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
     }
 
-    public async Task StartServer()
+    public void StartServer()
     {
         _server.Bind(new IPEndPoint(IPAddress.Any, Port));
         var ipAddress = GetLocalIPAddress();
@@ -27,7 +28,7 @@ public class UdpServer
             EndPoint remoteEndPoint = new IPEndPoint(IPAddress.Any, 0);
             int receivedBytes = _server.ReceiveFrom(buffer, ref remoteEndPoint);
             
-            ThreadPool.QueueUserWorkItem(_ => ProcessImage(buffer, receivedBytes, remoteEndPoint));
+            ThreadPool.QueueUserWorkItem(_ => ProcessImageData(buffer, receivedBytes, remoteEndPoint));
         }
     }
 
@@ -44,9 +45,38 @@ public class UdpServer
         throw new Exception("Локальный IP-адрес не найден.");
     }
 
-    private void ProcessImage(byte[] buffer, int receivedBytes, EndPoint remoteEndPoint)
+    private ConcurrentDictionary<EndPoint, List<byte[]>> receivedFragments = new ConcurrentDictionary<EndPoint, List<byte[]>>();
+    private ConcurrentDictionary<EndPoint, int> fragmentsToExpect = new ConcurrentDictionary<EndPoint, int>();
+
+    private void ProcessImageData(byte[] buffer, int receivedBytes, EndPoint remoteEndPoint)
     {
-        using (MemoryStream ms = new MemoryStream(buffer, 0 , receivedBytes))
+        int fragmentNumber = BitConverter.ToInt32(buffer, 0);
+        int fragmentsNumber = BitConverter.ToInt32(buffer, 4);
+        byte[] fragmentData = new byte[receivedBytes - 8];
+        Array.Copy(buffer, 8, fragmentData, 0, receivedBytes-8);
+
+        if (!receivedFragments.ContainsKey(remoteEndPoint))
+        {
+            receivedFragments[remoteEndPoint] = new List<byte[]>();
+            fragmentsToExpect[remoteEndPoint] = fragmentsNumber;
+        }
+
+        receivedFragments[remoteEndPoint].Add(fragmentData);
+        Console.WriteLine($"Получена часть {fragmentNumber+1} из {fragmentsNumber} от {remoteEndPoint}");
+        Console.WriteLine($"Количество фрагментов получено: {receivedFragments[remoteEndPoint].Count}");
+
+        if ((receivedFragments[remoteEndPoint].Count == fragmentsToExpect[remoteEndPoint]))
+        {
+            byte[] fullImageData = CombineFragments(receivedFragments[remoteEndPoint]);
+            ProcessFullImage(fullImageData, receivedBytes - 8, remoteEndPoint);
+            receivedFragments.Remove(remoteEndPoint, out _);
+            fragmentsToExpect.Remove(remoteEndPoint, out _);
+        }
+    }
+
+    private void ProcessFullImage(byte[] buffer, int receivedBytes, EndPoint remoteEndPoint)
+    {
+        using (MemoryStream ms = new MemoryStream(buffer))
         {
             var image = Image.FromStream(ms);
 
@@ -57,10 +87,35 @@ public class UdpServer
                 processedImage.Save(outputMs, ImageFormat.Jpeg);
                 byte[] responseBytes = outputMs.ToArray();
 
-                // Отправляем обработанное изображение обратно клиенту
-                _server.SendTo(responseBytes, remoteEndPoint);
+                int fragmentSize = 60000;
+                int fragmentsNumber = (responseBytes.Length + fragmentSize - 1) / fragmentSize;
+
+                for (int i = 0; i < fragmentsNumber; i++)
+                {
+                    int size = Math.Min(fragmentSize, responseBytes.Length - i * fragmentSize);
+
+                    byte[] fragmentData = new byte[size];
+                    Array.Copy(responseBytes, i*fragmentSize, fragmentData, 0, size);
+                
+                    _server.SendTo(fragmentData, remoteEndPoint);
+                }
+                
+                //_server.SendTo(responseBytes, remoteEndPoint);
                 Console.WriteLine("Изображение обработано и отправлено обратно клиенту.");
             }
+        }
+    }
+
+    private byte[] CombineFragments(List<byte[]> fragments)
+    {
+        using (MemoryStream ms = new MemoryStream())
+        {
+            foreach (var fragment in fragments)
+            {
+                ms.Write(fragment, 0, fragment.Length);
+            }
+
+            return ms.ToArray();
         }
     }
 

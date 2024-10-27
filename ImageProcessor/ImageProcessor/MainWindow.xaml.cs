@@ -31,38 +31,65 @@ namespace ImageProcessor
             }
 
             byte[] data = ImageToByteArray(_currentImage);
+            EndPoint endPoint = new IPEndPoint(IPAddress.Parse(IpTextBox.Text), 8080);
 
-            _udpSocket.Connect(new IPEndPoint(IPAddress.Parse(IpTextBox.Text), 8080));
+            int fragmentSize = 60000;
+            int fragmentsNumber = (data.Length + fragmentSize - 1) / fragmentSize;
 
-            _udpSocket.Send(data);
+            for (int i = 0; i < fragmentsNumber; i++)
+            {
+                int size = Math.Min(fragmentSize, data.Length - i * fragmentSize);
 
-            ReceiveImage();
+                byte[] fragmentData = new byte[size + 8];
+                Array.Copy(data, i*fragmentSize, fragmentData, 8, size);
+
+                byte[] fragmentNumber = BitConverter.GetBytes(i);
+                Array.Copy(fragmentNumber, 0, fragmentData, 0, 4);
+
+                byte[] fragmentsNumberBytes = BitConverter.GetBytes(fragmentsNumber);
+                Array.Copy(fragmentsNumberBytes, 0, fragmentData, 4, 4);
+                
+                _udpSocket.SendTo(fragmentData, endPoint);
+                
+                Task.Delay(500);
+            }
+            
+            //_udpSocket.SendTo(data, endPoint);
+
+            ReceiveImage(endPoint);
         }
 
-        private void ReceiveImage()
+        private void ReceiveImage(EndPoint endPoint)
         {
             byte[] buffer = new byte[65535];
-            
-            EndPoint remoteEndPoint = new IPEndPoint(IPAddress.Any, 0);
-            int receivedBytes = _udpSocket.ReceiveFrom(buffer, ref remoteEndPoint);
+            using MemoryStream ms = new MemoryStream();
 
-            using (MemoryStream ms = new MemoryStream(buffer, 0, receivedBytes))
+            while (true)
             {
-                Image processedImage = Image.FromStream(ms);
-                // Сохраните или отобразите обработанное изображение
-                //processedImage.Save("processed_image.jpg");
-                //MessageBox.Show("Обработанное изображение получено и сохранено как processed_image.jpg");
-                processedImage.Save(ms, ImageFormat.Png);
-                ms.Position = 0;
-
-                var bitmapImage = new BitmapImage();
-                bitmapImage.BeginInit();
-                bitmapImage.StreamSource = ms;
-                bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
-                bitmapImage.EndInit();
-
-                ShowImage(bitmapImage);
+                int receivedBytes = _udpSocket.ReceiveFrom(buffer, ref endPoint);
+                if (receivedBytes > 0)
+                {
+                    Console.WriteLine("Получил фрагмент.");
+                    ms.Write(buffer, 0, receivedBytes);
+                    if (receivedBytes < buffer.Length)
+                    {
+                        break;
+                    }
+                }
             }
+
+            ms.Position = 0;
+            Image processedImage = Image.FromStream(ms);
+            processedImage.Save(ms, ImageFormat.Jpeg);
+            
+            ms.Position = 0;
+            var bitmapImage = new BitmapImage();
+            bitmapImage.BeginInit();
+            bitmapImage.StreamSource = ms;
+            bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
+            bitmapImage.EndInit();
+
+            ShowImage(bitmapImage);
         }
 
         private void ShowImage(BitmapImage bitmapImage)
