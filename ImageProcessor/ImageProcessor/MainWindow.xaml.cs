@@ -23,7 +23,7 @@ namespace ImageProcessor
             _udpSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
         }
 
-        private void SendMessage()
+        private async void SendMessage()
         {
             if(_currentImage == null)
             {
@@ -51,7 +51,7 @@ namespace ImageProcessor
                 
                 _udpSocket.SendTo(fragmentData, endPoint);
                 
-                Task.Delay(500);
+                await Task.Delay(500);
             }
             
             //_udpSocket.SendTo(data, endPoint);
@@ -70,8 +70,10 @@ namespace ImageProcessor
                 if (receivedBytes > 0)
                 {
                     Console.WriteLine("Получил фрагмент.");
-                    ms.Write(buffer, 0, receivedBytes);
-                    if (receivedBytes < buffer.Length)
+                    int fragmentNumber = BitConverter.ToInt32(buffer, 0);
+                    int fragmentsNumber = BitConverter.ToInt32(buffer, 4);
+                    ms.Write(buffer, 8, receivedBytes - 8);
+                    if (fragmentNumber + 1 == fragmentsNumber)
                     {
                         break;
                     }

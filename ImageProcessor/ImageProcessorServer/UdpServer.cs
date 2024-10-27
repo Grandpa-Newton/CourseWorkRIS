@@ -74,7 +74,7 @@ public class UdpServer
         }
     }
 
-    private void ProcessFullImage(byte[] buffer, int receivedBytes, EndPoint remoteEndPoint)
+    private async void ProcessFullImage(byte[] buffer, int receivedBytes, EndPoint remoteEndPoint)
     {
         using (MemoryStream ms = new MemoryStream(buffer))
         {
@@ -94,10 +94,18 @@ public class UdpServer
                 {
                     int size = Math.Min(fragmentSize, responseBytes.Length - i * fragmentSize);
 
-                    byte[] fragmentData = new byte[size];
-                    Array.Copy(responseBytes, i*fragmentSize, fragmentData, 0, size);
-                
+                    byte[] fragmentData = new byte[size + 8];
+                    Array.Copy(responseBytes, i*fragmentSize, fragmentData, 8, size);
+
+                    byte[] fragmentNumber = BitConverter.GetBytes(i);
+                    Array.Copy(fragmentNumber, 0, fragmentData, 0, 4);
+
+                    byte[] fragmentsNumberBytes = BitConverter.GetBytes(fragmentsNumber);
+                    Array.Copy(fragmentsNumberBytes, 0, fragmentData, 4, 4);
+                    
                     _server.SendTo(fragmentData, remoteEndPoint);
+
+                    await Task.Delay(500);
                 }
                 
                 //_server.SendTo(responseBytes, remoteEndPoint);
