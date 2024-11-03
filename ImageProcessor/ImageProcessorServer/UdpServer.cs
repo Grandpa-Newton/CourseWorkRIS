@@ -10,6 +10,7 @@ public class UdpServer
 {
     private const int Port = 8080;
     private Socket _server;
+    private LowPassFilterApplyer _filterApplyer = new();
 
     public UdpServer()
     {
@@ -127,25 +128,8 @@ public class UdpServer
         }
     }
 
-    static Image ApplyLowPassFilter(Image image)
+    private Image ApplyLowPassFilter(Image image)
     {
-        Bitmap bitmap = new Bitmap(image);
-        for (int x = 1; x < bitmap.Width - 1; x++)
-        {
-            for (int y = 1; y < bitmap.Height - 1; y++)
-            {
-                Color prevX = bitmap.GetPixel(x - 1, y);
-                Color nextX = bitmap.GetPixel(x + 1, y);
-                Color prevY = bitmap.GetPixel(x, y - 1);
-                Color nextY = bitmap.GetPixel(x, y + 1);
-                int avgR = (prevX.R + nextX.R + prevY.R + nextY.R) / 4;
-                int avgG = (prevX.G + nextX.G + prevY.G + nextY.G) / 4;
-                int avgB = (prevX.B + nextX.B + prevY.B + nextY.B) / 4;
-                Color avgColor = Color.FromArgb(avgR, avgG, avgB);
-                bitmap.SetPixel(x, y, avgColor);
-            }
-        }
-
-        return bitmap;
+        return _filterApplyer.ApplyLowPassFilter(image);
     }
 }
