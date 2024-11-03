@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Net;
@@ -128,8 +129,22 @@ public class UdpServer
         }
     }
 
+    private int _threadsCount = 1;    
+
     private Image ApplyLowPassFilter(Image image)
     {
-        return _filterApplyer.ApplyLowPassFilter(image);
+        Stopwatch stopwatch = new Stopwatch();
+        /*var filterApplyer = new LowPassFilterApplyer();
+        stopwatch.Start();
+        var linearResult = filterApplyer.ApplyLowPassFilter(image);
+        Console.WriteLine($"Время, потраченное на обработку линейным способом: {stopwatch.ElapsedMilliseconds}");*/
+
+        var multiThreadApplyer = new LowPassFilterApplyer();
+        stopwatch.Restart();
+        var multiThreadResult = multiThreadApplyer.ApplyLowPassFilter(image, _threadsCount);
+        Console.WriteLine($"Время, потраченное на обработку {_threadsCount} потоками: {stopwatch.ElapsedMilliseconds}");
+        _threadsCount++;
+        
+        return multiThreadResult;
     }
 }
