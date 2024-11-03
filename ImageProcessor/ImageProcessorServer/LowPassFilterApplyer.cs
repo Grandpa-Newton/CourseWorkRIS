@@ -1,4 +1,6 @@
 using System.Drawing;
+using System.Drawing.Imaging;
+using System.Runtime.InteropServices;
 
 namespace ImageProcessorServer;
 
@@ -12,34 +14,45 @@ public class LowPassFilterApplyer
     };
 
     private int _threadsFinished;
-    private List<Thread> _threads;
     private int _bitmapWidth;
     private int _bitmapHeight;
 
     public Image ApplyLowPassFilter(Image inputImage)
     {
-        Console.WriteLine("Началась обработка изображения");
-        
         Bitmap bitmap = new Bitmap(inputImage);
         _bitmapWidth = bitmap.Width;
         _bitmapHeight = bitmap.Height;
-        Bitmap result = new Bitmap(bitmap.Width, bitmap.Height);
 
-        Calculate(0, bitmap.Width, bitmap, result);
+        var rect = new Rectangle(0, 0, bitmap.Width, bitmap.Height);
+        var data = bitmap.LockBits(rect, ImageLockMode.ReadWrite, bitmap.PixelFormat);
+        var depth = Bitmap.GetPixelFormatSize(data.PixelFormat) / 8;
 
-        return result;
+        var buffer = new byte[data.Stride * data.Height];
+        
+        Marshal.Copy(data.Scan0, buffer, 0, buffer.Length);
+        
+        Calculate(0, _bitmapWidth, buffer, depth, data.Stride);
+        
+        Marshal.Copy(buffer, 0, data.Scan0, buffer.Length);
+        
+        bitmap.UnlockBits(data);
+
+        return bitmap;
     }
 
     private void Calculate(int startIndex, int finishIndex, 
-        Bitmap bitmap, Bitmap result)
+        byte[] buffer, int depth, int stride)
     {
         var offset = _kernel.GetLength(0) / 2;
+        
         for (int i = startIndex; i < finishIndex; i++)
         {
             for (int j = 0; j < _bitmapHeight; j++)
             {
                 var colorMap = new Color[_kernel.GetLength(0), _kernel.GetLength(0)];
 
+                int byteOffset = j * stride + i * depth;
+                
                 for (int yFilter = 0; yFilter < _kernel.GetLength(0); yFilter++)
                 {
                     int pk = (yFilter + i - offset <= 0) ? 0 :
@@ -51,31 +64,49 @@ public class LowPassFilterApplyer
                             (xFilter + j - offset >= _bitmapHeight - 1) ? _bitmapHeight - 1 :
                             xFilter + j - offset;
 
-                        lock (bitmap)
-                        {
-                            colorMap[yFilter, xFilter] = bitmap.GetPixel(pk, pl);
-                        }
+                        var byteColorOffset = pl * stride + pk * depth;
+
+                        colorMap[yFilter, xFilter] = Color.FromArgb(buffer[byteColorOffset], 
+                            buffer[byteColorOffset + 1], buffer[byteColorOffset + 2]);
                     }
                 }
 
                 Color resultColor = MultiplyColorWithKernel(colorMap);
 
-                lock (result)
-                {
-                    result.SetPixel(i, j, resultColor);
-                }
+                buffer[byteOffset] = resultColor.R;
+                buffer[byteOffset + 1] = resultColor.G;
+                buffer[byteOffset + 2] = resultColor.B;
             }
         }
     }
 
     public Image ApplyLowPassFilter(Image inputImage, int threadsCount)
     {
-        _threads = new List<Thread>();
         Bitmap bitmap = new Bitmap(inputImage);
         _bitmapWidth = bitmap.Width;
         _bitmapHeight = bitmap.Height;
-        Bitmap result = new Bitmap(bitmap.Width, bitmap.Height);
 
+        var rect = new Rectangle(0, 0, bitmap.Width, bitmap.Height);
+        var data = bitmap.LockBits(rect, ImageLockMode.ReadWrite, bitmap.PixelFormat);
+        var depth = Bitmap.GetPixelFormatSize(data.PixelFormat) / 8;
+
+        var buffer = new byte[data.Stride * data.Height];
+        
+        Marshal.Copy(data.Scan0, buffer, 0, buffer.Length);
+
+        /*Parallel.For(0, threadsCount, threadNumber =>
+            {
+                var size = (bitmap.Width - threadNumber + threadsCount - 1) / threadsCount;
+                int it = 0;
+
+                for (int i = 0; i < threadNumber; i++)
+                {
+                    it += (bitmap.Width - i + threadsCount - 1) / threadsCount;
+                }
+                
+                Calculate(it, it + size, buffer, depth, data.Stride);
+            });*/
+        
         for (int i = 0, start = 0; i < threadsCount; i++)
         {
             var size = (bitmap.Width - i + threadsCount - 1) / threadsCount;
@@ -83,7 +114,7 @@ public class LowPassFilterApplyer
 
             ThreadPool.QueueUserWorkItem(_ =>
             {
-                Calculate(it, it + size, bitmap, result);
+                Calculate(it, it + size, buffer, depth, data.Stride);
                 _threadsFinished++;
             });
 
@@ -95,10 +126,12 @@ public class LowPassFilterApplyer
             // Wait
         }
 
-        return result;
+        Marshal.Copy(buffer, 0, data.Scan0, buffer.Length);
+        
+        bitmap.UnlockBits(data);
+
+        return bitmap;
     }
-    
-    
 
     private Color MultiplyColorWithKernel(Color[,] colorMap)
     {
