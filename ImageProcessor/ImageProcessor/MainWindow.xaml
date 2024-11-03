@@ -10,7 +10,7 @@
         <Button x:Name="SendMessageButton" Content="Отправить сообщение" HorizontalAlignment="Center" VerticalAlignment="Top" Width="152" Height="47" Click="SendMessageButton_Click" Margin="0,258,0,0"/>
         <TextBox x:Name="IpTextBox" HorizontalAlignment="Center" TextWrapping="Wrap" VerticalAlignment="Center" Width="152" Height="35"/>
         <Button x:Name="ChooseFileButton" Content="Выбрать файл" HorizontalAlignment="Center" Margin="0,135,0,0" VerticalAlignment="Top" Width="152" Height="33" Click="ChooseFileButton_Click"/>
-        <Image x:Name="ImageToSend" HorizontalAlignment="Left" Height="192" Margin="606,119,0,0" VerticalAlignment="Top" Width="135"/>
-
+        <Image x:Name="ProcessedImage" HorizontalAlignment="Left" Height="192" Margin="606,119,0,0" VerticalAlignment="Top" Width="135"/>
+        <Image x:Name="OpenedImage" HorizontalAlignment="Left" Height="192" Margin="56,119,0,0" VerticalAlignment="Top" Width="135"/>
     </Grid>
 </Window>

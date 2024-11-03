@@ -80,7 +80,7 @@ public class UdpServer
         {
             var image = Image.FromStream(ms);
 
-            Image processedImage = ApplyLowPassFilter(ChangeBrightness(image, 1.2f));
+            Image processedImage = ApplyLowPassFilter(image);
 
             using (MemoryStream outputMs = new MemoryStream())
             {
@@ -105,7 +105,7 @@ public class UdpServer
                     
                     _server.SendTo(fragmentData, remoteEndPoint);
 
-                    await Task.Delay(500);
+                    await Task.Delay(50);
                 }
                 
                 //_server.SendTo(responseBytes, remoteEndPoint);
@@ -125,26 +125,6 @@ public class UdpServer
 
             return ms.ToArray();
         }
-    }
-
-    static Image ChangeBrightness(Image image, float brightnessFactor)
-    {
-        Bitmap tempBitmap = new Bitmap(image.Width, image.Height);
-        Graphics g = Graphics.FromImage(tempBitmap);
-        float[][] ptsArray =
-        {
-            new float[] { brightnessFactor, 0, 0, 0, 0 },
-            new float[] { 0, brightnessFactor, 0, 0, 0 },
-            new float[] { 0, 0, brightnessFactor, 0, 0 },
-            new float[] { 0, 0, 0, 1, 0 },
-            new float[] { 0, 0, 0, 0, 1 }
-        };
-        ImageAttributes attributes = new ImageAttributes();
-        attributes.SetColorMatrix(new ColorMatrix(ptsArray), ColorMatrixFlag.Default, ColorAdjustType.Bitmap);
-        g.DrawImage(image, new Rectangle(0, 0, image.Width, image.Height),
-            0, 0, image.Width, image.Height, GraphicsUnit.Pixel, attributes);
-        g.Dispose();
-        return tempBitmap;
     }
 
     static Image ApplyLowPassFilter(Image image)

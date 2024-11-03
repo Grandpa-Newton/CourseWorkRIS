@@ -51,7 +51,7 @@ namespace ImageProcessor
                 
                 _udpSocket.SendTo(fragmentData, endPoint);
                 
-                await Task.Delay(500);
+                await Task.Delay(1);
             }
             
             //_udpSocket.SendTo(data, endPoint);
@@ -96,7 +96,7 @@ namespace ImageProcessor
 
         private void ShowImage(BitmapImage bitmapImage)
         {
-            ImageToSend.Source = bitmapImage;
+            ProcessedImage.Source = bitmapImage;
         }
 
         private void SendMessageButton_Click(object sender, RoutedEventArgs e)
@@ -114,8 +114,20 @@ namespace ImageProcessor
 
             if (showDialogResult.HasValue && showDialogResult.Value)
             {
-                System.IO.StreamReader sr = new System.IO.StreamReader(fileDialog.FileName);
+                StreamReader sr = new StreamReader(fileDialog.FileName);
                 _currentImage = Image.FromFile(fileDialog.FileName);
+                using MemoryStream ms = new MemoryStream();
+                ms.Position = 0;
+                _currentImage.Save(ms, ImageFormat.Jpeg);
+            
+                ms.Position = 0;
+                var bitmapImage = new BitmapImage();
+                bitmapImage.BeginInit();
+                bitmapImage.StreamSource = ms;
+                bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
+                bitmapImage.EndInit();
+
+                OpenedImage.Source = bitmapImage;
             }
         }
 
