@@ -8,9 +8,9 @@ public class LowPassFilterApplyer
 {
     private readonly double[,] _kernel = new double[3,3]
     {
-        {1, 1, 1},
-        {1, 1, 1},
-        {1, 1, 1}
+        {1/9f, 1/9f, 1/9f},
+        {1/9f, 1/9f, 1/9f},
+        {1/9f, 1/9f, 1/9f}
     };
 
     private int _threadsFinished;
@@ -49,33 +49,34 @@ public class LowPassFilterApplyer
         {
             for (int j = 0; j < _bitmapHeight; j++)
             {
-                var colorMap = new Color[_kernel.GetLength(0), _kernel.GetLength(0)];
-
-                int byteOffset = j * stride + i * depth;
+                double r = 0;
+                double g = 0;
+                double b = 0;
                 
                 for (int yFilter = 0; yFilter < _kernel.GetLength(0); yFilter++)
                 {
-                    int pk = (yFilter + i - offset <= 0) ? 0 :
-                        (yFilter + i - offset >= _bitmapWidth - 1) ? _bitmapWidth - 1 :
+                    int pk = (yFilter + i - offset < 0) ? 0 :
+                        (yFilter + i - offset >= _bitmapWidth) ? _bitmapWidth - 1 :
                         yFilter + i - offset;
                     for (int xFilter = 0; xFilter < _kernel.GetLength(0); xFilter++)
                     {
-                        int pl = (xFilter + j - offset <= 0) ? 0 :
-                            (xFilter + j - offset >= _bitmapHeight - 1) ? _bitmapHeight - 1 :
+                        int pl = (xFilter + j - offset < 0) ? 0 :
+                            (xFilter + j - offset >= _bitmapHeight) ? _bitmapHeight - 1 :
                             xFilter + j - offset;
 
-                        var byteColorOffset = pl * stride + pk * depth;
+                        int byteColorOffset = pl * stride + pk * depth;
 
-                        colorMap[yFilter, xFilter] = Color.FromArgb(buffer[byteColorOffset], 
-                            buffer[byteColorOffset + 1], buffer[byteColorOffset + 2]);
+                        b += buffer[byteColorOffset] * _kernel[yFilter, xFilter];
+                        g += buffer[byteColorOffset + 1] * _kernel[yFilter, xFilter];
+                        r += buffer[byteColorOffset + 2] * _kernel[yFilter, xFilter];
                     }
                 }
 
-                Color resultColor = MultiplyColorWithKernel(colorMap);
-
-                buffer[byteOffset] = resultColor.R;
-                buffer[byteOffset + 1] = resultColor.G;
-                buffer[byteOffset + 2] = resultColor.B;
+                int byteOffset = j * stride + i * depth;
+                
+                buffer[byteOffset] = (byte)Normalize(b);
+                buffer[byteOffset + 1] = (byte)Normalize(g);
+                buffer[byteOffset + 2] = (byte)Normalize(r);
             }
         }
     }
@@ -120,27 +121,8 @@ public class LowPassFilterApplyer
         return bitmap;
     }
 
-    private Color MultiplyColorWithKernel(Color[,] colorMap)
-    {
-        double r = 0;
-        double g = 0;
-        double b = 0;
-
-        for (int i = 0; i < _kernel.GetLength(0); i++)
-        {
-            for (int j = 0; j < _kernel.GetLength(0); j++)
-            {
-                r += colorMap[j, i].R * _kernel[j, i];
-                g += colorMap[j, i].G * _kernel[j, i];
-                b += colorMap[j, i].B * _kernel[j, i];
-            }
-        }
-
-        return Color.FromArgb(Normalize(r), Normalize(g), Normalize(b));
-    }
-
     private int Normalize(double value)
     {
-        return Math.Min(Math.Max((int)(value/9f), 0), 255);
+        return Math.Min(Math.Max((int)value, 0), 255);
     }
 }
