@@ -17,6 +17,7 @@ namespace ImageProcessor
         private Socket _udpSocket;
         private Image _currentImage;
         private Logger _logger;
+        private UdpImageClient _udpClient = new();
         public MainWindow()
         {
             InitializeComponent();
@@ -38,120 +39,14 @@ namespace ImageProcessor
                 return;
             }
 
-            byte[] data = ImageToByteArray(_currentImage);
+            var processedImage = await _udpClient.GetProcessedImage(_currentImage, IpTextBox.Text, _udpSocket, _logger);
 
-            EndPoint endPoint;
-
-            try
+            if(processedImage == null)
             {
-                endPoint = new IPEndPoint(IPAddress.Parse(IpTextBox.Text), 8888);
-            }
-            catch (Exception ex)
-            {
-                _logger.Log(string.Format("ОШИБКА! {0}", ex.Message));
-                _udpSocket.Close();
-                _udpSocket.Dispose();
                 return;
             }
 
-            _udpSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-            try
-            {
-                _udpSocket.Connect(endPoint);
-            }
-            catch (Exception ex)
-            {
-                _logger.Log(string.Format("ОШИБКА! {0}", ex.Message));
-                _udpSocket.Close();
-                _udpSocket.Dispose();
-                return;
-            }
-
-            int fragmentSize = 60000;
-            int fragmentsNumber = (data.Length + fragmentSize - 1) / fragmentSize;
-
-            _logger.Log("Началась отправка изображения.");
-
-            for (int i = 0; i < fragmentsNumber; i++)
-            {
-                int size = Math.Min(fragmentSize, data.Length - i * fragmentSize);
-
-                byte[] fragmentData = new byte[size + 8];
-                Array.Copy(data, i*fragmentSize, fragmentData, 8, size);
-
-                byte[] fragmentNumber = BitConverter.GetBytes(i);
-                Array.Copy(fragmentNumber, 0, fragmentData, 0, 4);
-
-                byte[] fragmentsNumberBytes = BitConverter.GetBytes(fragmentsNumber);
-                Array.Copy(fragmentsNumberBytes, 0, fragmentData, 4, 4);
-
-                try
-                {
-                    _udpSocket.Send(fragmentData);
-                }
-                catch (Exception ex)
-                {
-                    _logger.Log(string.Format("ОШИБКА! {0}", ex.Message));
-                    _udpSocket.Close();
-                    _udpSocket.Dispose();
-                    return;
-                }
-
-                _logger.Log(string.Format("Отправлено {0} из {1} фрагментов изображения.", i+1, fragmentsNumber));
-                
-                await Task.Delay(50);
-            }
-
-            ReceiveImage(endPoint);
-        }
-
-        private void ReceiveImage(EndPoint endPoint)
-        {
-            byte[] buffer = new byte[65535];
-            using MemoryStream ms = new MemoryStream();
-
-            while (true)
-            {
-                int receivedBytes = 0;
-                try
-                {
-                    receivedBytes = _udpSocket.Receive(buffer);
-                }
-                catch(Exception ex)
-                {
-                    _logger.Log(string.Format("ОШИБКА! {0}", ex.Message));
-                    _udpSocket.Close();
-                    _udpSocket.Dispose();
-                    return;
-                }
-                if (receivedBytes > 0)
-                {
-                    int fragmentNumber = BitConverter.ToInt32(buffer, 0);
-                    int fragmentsNumber = BitConverter.ToInt32(buffer, 4);
-                    _logger.Log(string.Format("Получен фрагмент [{0}/{1}] обработанного изображения.", fragmentNumber+1, fragmentsNumber));
-                    ms.Write(buffer, 8, receivedBytes - 8);
-                    if (fragmentNumber + 1 == fragmentsNumber)
-                    {
-                        break;
-                    }
-                }
-            }
-
-            _udpSocket.Close();
-            _udpSocket.Dispose();
-
-            ms.Position = 0;
-            Image processedImage = Image.FromStream(ms);
-            processedImage.Save(ms, ImageFormat.Jpeg);
-            
-            ms.Position = 0;
-            var bitmapImage = new BitmapImage();
-            bitmapImage.BeginInit();
-            bitmapImage.StreamSource = ms;
-            bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
-            bitmapImage.EndInit();
-
-            ShowImage(bitmapImage);
+            ShowImage(processedImage);
         }
 
         private void ShowImage(BitmapImage bitmapImage)
@@ -188,15 +83,6 @@ namespace ImageProcessor
                 bitmapImage.EndInit();
 
                 OpenedImage.Source = bitmapImage;
-            }
-        }
-
-        private byte[] ImageToByteArray(Image imageIn)
-        {
-            using (var ms = new MemoryStream())
-            {
-                imageIn.Save(ms, imageIn.RawFormat);
-                return ms.ToArray();
             }
         }
     }

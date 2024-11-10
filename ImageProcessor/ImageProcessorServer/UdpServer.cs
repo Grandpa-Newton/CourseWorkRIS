@@ -50,7 +50,7 @@ public class UdpServer
     private ConcurrentDictionary<EndPoint, List<byte[]>> receivedFragments = new ConcurrentDictionary<EndPoint, List<byte[]>>();
     private ConcurrentDictionary<EndPoint, int> fragmentsToExpect = new ConcurrentDictionary<EndPoint, int>();
 
-    private void ProcessImageData(byte[] buffer, int receivedBytes, EndPoint remoteEndPoint)
+    private async Task ProcessImageData(byte[] buffer, int receivedBytes, EndPoint remoteEndPoint)
     {
         int fragmentNumber = BitConverter.ToInt32(buffer, 0);
         int fragmentsNumber = BitConverter.ToInt32(buffer, 4);
