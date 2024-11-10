@@ -16,11 +16,20 @@ namespace ImageProcessor
     {
         private Socket _udpSocket;
         private Image _currentImage;
+        private Logger _logger;
         public MainWindow()
         {
             InitializeComponent();
+
+            this.WindowState = WindowState.Maximized;
             
             _udpSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+
+            _logger = new Logger((message) =>
+            {
+                Console.WriteLine(message);
+                infoLabel.Content = message;
+            });
         }
 
         private async void SendMessage()
@@ -36,6 +45,8 @@ namespace ImageProcessor
             int fragmentSize = 60000;
             int fragmentsNumber = (data.Length + fragmentSize - 1) / fragmentSize;
 
+            _logger.Log("Началась отправка изображения.");
+
             for (int i = 0; i < fragmentsNumber; i++)
             {
                 int size = Math.Min(fragmentSize, data.Length - i * fragmentSize);
@@ -50,11 +61,11 @@ namespace ImageProcessor
                 Array.Copy(fragmentsNumberBytes, 0, fragmentData, 4, 4);
                 
                 _udpSocket.SendTo(fragmentData, endPoint);
+
+                _logger.Log(string.Format("Отправлено {0} из {1} фрагментов изображения.", i+1, fragmentsNumber));
                 
-                await Task.Delay(1);
+                await Task.Delay(50);
             }
-            
-            //_udpSocket.SendTo(data, endPoint);
 
             ReceiveImage(endPoint);
         }
@@ -69,9 +80,9 @@ namespace ImageProcessor
                 int receivedBytes = _udpSocket.ReceiveFrom(buffer, ref endPoint);
                 if (receivedBytes > 0)
                 {
-                    Console.WriteLine("Получил фрагмент.");
                     int fragmentNumber = BitConverter.ToInt32(buffer, 0);
                     int fragmentsNumber = BitConverter.ToInt32(buffer, 4);
+                    _logger.Log(string.Format("Получен фрагмент {0} из {1} обработанного изображения.", fragmentNumber+1, fragmentsNumber));
                     ms.Write(buffer, 8, receivedBytes - 8);
                     if (fragmentNumber + 1 == fragmentsNumber)
                     {

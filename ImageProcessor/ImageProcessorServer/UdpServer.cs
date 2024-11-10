@@ -110,7 +110,6 @@ public class UdpServer
                     await Task.Delay(50);
                 }
                 
-                //_server.SendTo(responseBytes, remoteEndPoint);
                 Console.WriteLine("Изображение обработано и отправлено обратно клиенту.");
             }
         }

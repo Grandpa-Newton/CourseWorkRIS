@@ -93,19 +93,6 @@ public class LowPassFilterApplyer
         var buffer = new byte[data.Stride * data.Height];
         
         Marshal.Copy(data.Scan0, buffer, 0, buffer.Length);
-
-        /*Parallel.For(0, threadsCount, threadNumber =>
-            {
-                var size = (bitmap.Width - threadNumber + threadsCount - 1) / threadsCount;
-                int it = 0;
-
-                for (int i = 0; i < threadNumber; i++)
-                {
-                    it += (bitmap.Width - i + threadsCount - 1) / threadsCount;
-                }
-                
-                Calculate(it, it + size, buffer, depth, data.Stride);
-            });*/
         
         for (int i = 0, start = 0; i < threadsCount; i++)
         {
