@@ -16,6 +16,6 @@
         <Label Content="Обработанное изображение" HorizontalAlignment="Right" Margin="0,37,79,0" VerticalAlignment="Top" Height="68" Width="527" FontSize="36" FontWeight="Bold"/>
         <Label Content="Ip-адрес сервера" HorizontalAlignment="Center" Margin="0,161,0,0" VerticalAlignment="Top" FontSize="36" FontWeight="Bold"/>
         <Label Content="Информация" HorizontalAlignment="Center" Margin="0,846,0,0" VerticalAlignment="Top" Width="248" FontSize="36" FontWeight="Bold"/>
-        <Label x:Name="infoLabel" Content="" HorizontalAlignment="Center" Margin="0,936,0,0" VerticalAlignment="Top" Width="1790" FontSize="16" HorizontalContentAlignment="Center" Height="120"/>
+        <Label x:Name="infoLabel" Content="" HorizontalAlignment="Center" Margin="0,936,0,0" VerticalAlignment="Top" Width="1790" FontSize="16" HorizontalContentAlignment="Center" Height="108"/>
     </Grid>
 </Window>

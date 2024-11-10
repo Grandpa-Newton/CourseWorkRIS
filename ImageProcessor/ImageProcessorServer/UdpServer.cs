@@ -11,7 +11,7 @@ public class UdpServer
 {
     private const int Port = 8080;
     private Socket _server;
-    private LowPassFilterApplyer _filterApplyer = new();
+    private int _threadsCount = 6;
 
     public UdpServer()
     {
@@ -126,23 +126,20 @@ public class UdpServer
 
             return ms.ToArray();
         }
-    }
-
-    private int _threadsCount = 1;    
+    } 
 
     private Image ApplyLowPassFilter(Image image)
     {
         Stopwatch stopwatch = new Stopwatch();
-        /*var filterApplyer = new LowPassFilterApplyer();
+        var filterApplyer = new LowPassFilterApplyer();
         stopwatch.Start();
         var linearResult = filterApplyer.ApplyLowPassFilter(image);
-        Console.WriteLine($"Время, потраченное на обработку линейным способом: {stopwatch.ElapsedMilliseconds}");*/
+        Console.WriteLine($"Время, потраченное на обработку линейным способом: {stopwatch.ElapsedMilliseconds}");
 
         var multiThreadApplyer = new LowPassFilterApplyer();
         stopwatch.Restart();
         var multiThreadResult = multiThreadApplyer.ApplyLowPassFilter(image, _threadsCount);
         Console.WriteLine($"Время, потраченное на обработку {_threadsCount} потоками: {stopwatch.ElapsedMilliseconds}");
-        _threadsCount++;
         
         return multiThreadResult;
     }

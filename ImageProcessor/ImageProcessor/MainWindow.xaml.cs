@@ -22,8 +22,6 @@ namespace ImageProcessor
             InitializeComponent();
 
             this.WindowState = WindowState.Maximized;
-            
-            _udpSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
 
             _logger = new Logger((message) =>
             {
@@ -36,11 +34,27 @@ namespace ImageProcessor
         {
             if(_currentImage == null)
             {
+                _logger.Log("Для начала выберите изображение.");
                 return;
             }
 
+            _udpSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+
             byte[] data = ImageToByteArray(_currentImage);
-            EndPoint endPoint = new IPEndPoint(IPAddress.Parse(IpTextBox.Text), 8080);
+
+            EndPoint endPoint;
+
+            try
+            {
+                endPoint = new IPEndPoint(IPAddress.Parse(IpTextBox.Text), 8080);
+            }
+            catch (Exception ex)
+            {
+                _logger.Log(string.Format("ОШИБКА! {0}", ex.Message));
+                _udpSocket.Close();
+                _udpSocket.Dispose();
+                return;
+            }
 
             int fragmentSize = 60000;
             int fragmentsNumber = (data.Length + fragmentSize - 1) / fragmentSize;
@@ -59,8 +73,18 @@ namespace ImageProcessor
 
                 byte[] fragmentsNumberBytes = BitConverter.GetBytes(fragmentsNumber);
                 Array.Copy(fragmentsNumberBytes, 0, fragmentData, 4, 4);
-                
-                _udpSocket.SendTo(fragmentData, endPoint);
+
+                try
+                {
+                    _udpSocket.SendTo(fragmentData, endPoint);
+                }
+                catch (Exception ex)
+                {
+                    _logger.Log(string.Format("ОШИБКА! {0}", ex.Message));
+                    _udpSocket.Close();
+                    _udpSocket.Dispose();
+                    return;
+                }
 
                 _logger.Log(string.Format("Отправлено {0} из {1} фрагментов изображения.", i+1, fragmentsNumber));
                 
@@ -77,12 +101,23 @@ namespace ImageProcessor
 
             while (true)
             {
-                int receivedBytes = _udpSocket.ReceiveFrom(buffer, ref endPoint);
+                int receivedBytes = 0;
+                try
+                {
+                    receivedBytes = _udpSocket.ReceiveFrom(buffer, ref endPoint);
+                }
+                catch(Exception ex)
+                {
+                    _logger.Log(string.Format("ОШИБКА! {0}", ex.Message));
+                    _udpSocket.Close();
+                    _udpSocket.Dispose();
+                    return;
+                }
                 if (receivedBytes > 0)
                 {
                     int fragmentNumber = BitConverter.ToInt32(buffer, 0);
                     int fragmentsNumber = BitConverter.ToInt32(buffer, 4);
-                    _logger.Log(string.Format("Получен фрагмент {0} из {1} обработанного изображения.", fragmentNumber+1, fragmentsNumber));
+                    _logger.Log(string.Format("Получен фрагмент [{0}/{1}] обработанного изображения.", fragmentNumber+1, fragmentsNumber));
                     ms.Write(buffer, 8, receivedBytes - 8);
                     if (fragmentNumber + 1 == fragmentsNumber)
                     {
@@ -90,6 +125,9 @@ namespace ImageProcessor
                     }
                 }
             }
+
+            _udpSocket.Close();
+            _udpSocket.Dispose();
 
             ms.Position = 0;
             Image processedImage = Image.FromStream(ms);
@@ -119,7 +157,7 @@ namespace ImageProcessor
         {
             OpenFileDialog fileDialog = new OpenFileDialog();
             fileDialog.DefaultExt = ".jpg";
-            fileDialog.Filter = "Jpeg Images (.jpg)|*.jpg";
+            fileDialog.Filter = "Jpeg Images (.jpg)|*.png";
 
             var showDialogResult = fileDialog.ShowDialog();
 
