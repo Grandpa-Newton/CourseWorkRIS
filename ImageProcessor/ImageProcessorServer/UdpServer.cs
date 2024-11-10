@@ -9,7 +9,7 @@ namespace ImageProcessorServer;
 
 public class UdpServer
 {
-    private const int Port = 8080;
+    private const int Port = 8888;
     private Socket _server;
     private int _threadsCount = 6;
 

@@ -38,15 +38,26 @@ namespace ImageProcessor
                 return;
             }
 
-            _udpSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-
             byte[] data = ImageToByteArray(_currentImage);
 
             EndPoint endPoint;
 
             try
             {
-                endPoint = new IPEndPoint(IPAddress.Parse(IpTextBox.Text), 8080);
+                endPoint = new IPEndPoint(IPAddress.Parse(IpTextBox.Text), 8888);
+            }
+            catch (Exception ex)
+            {
+                _logger.Log(string.Format("ОШИБКА! {0}", ex.Message));
+                _udpSocket.Close();
+                _udpSocket.Dispose();
+                return;
+            }
+
+            _udpSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+            try
+            {
+                _udpSocket.Connect(endPoint);
             }
             catch (Exception ex)
             {
@@ -76,7 +87,7 @@ namespace ImageProcessor
 
                 try
                 {
-                    _udpSocket.SendTo(fragmentData, endPoint);
+                    _udpSocket.Send(fragmentData);
                 }
                 catch (Exception ex)
                 {
@@ -104,7 +115,7 @@ namespace ImageProcessor
                 int receivedBytes = 0;
                 try
                 {
-                    receivedBytes = _udpSocket.ReceiveFrom(buffer, ref endPoint);
+                    receivedBytes = _udpSocket.Receive(buffer);
                 }
                 catch(Exception ex)
                 {
