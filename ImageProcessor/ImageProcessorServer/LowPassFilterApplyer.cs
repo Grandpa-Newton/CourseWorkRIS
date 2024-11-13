@@ -40,7 +40,7 @@ public class LowPassFilterApplyer
         return bitmap;
     }
 
-    private void Calculate(int startIndex, int finishIndex, 
+    public void Calculate(int startIndex, int finishIndex, 
         byte[] buffer, int depth, int stride)
     {
         var offset = _kernel.GetLength(0) / 2;

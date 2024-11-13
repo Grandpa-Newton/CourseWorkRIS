@@ -63,7 +63,7 @@ namespace ImageProcessor
         {
             OpenFileDialog fileDialog = new OpenFileDialog();
             fileDialog.DefaultExt = ".jpg";
-            fileDialog.Filter = "Jpeg Images (.jpg)|*.png";
+            fileDialog.Filter = "Images (.jpg, .png)|*.png;*.jpg";
 
             var showDialogResult = fileDialog.ShowDialog();
 
