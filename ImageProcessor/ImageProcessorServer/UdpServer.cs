@@ -11,8 +11,8 @@ public class UdpServer
 {
     private const int Port = 8888;
     private Socket _server;
-    private int _threadsCount = 6;
-    private const bool IsMultiThread = false;
+    private int _threadsCount = 10;
+    private const bool IsMultiThread = true;
 
     public UdpServer()
     {

@@ -8,22 +8,6 @@ namespace ImageProcessorModuleTests
     [TestClass]
     public class ImageProcessorTests
     {
-        private const string IpAddress = "26.41.29.58";
-        private static Socket Socket;
-        private static int NumberOfPassedTests = 0;
-        static async Task fff(string[] args)
-        {
-            var sourceImage = Image.FromFile("sourceImage.jpg");
-            UdpImageClient client = new UdpImageClient();
-            var processedImage = await client.GetProcessedImage(sourceImage, IpAddress, Socket, new Logger((msg) =>
-            {
-                return;
-            }));
-
-
-            await Task.Delay(10);
-        }
-
         [TestMethod]
         public void TestImageProcessing()
         {

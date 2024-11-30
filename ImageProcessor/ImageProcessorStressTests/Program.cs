@@ -6,7 +6,7 @@ namespace ImageProcessorStressTests
 {
     internal class Program
     {
-        private const int NumberOfTests = 100;
+        private const int NumberOfTests = 10000;
         private const string IpAddress = "26.41.29.58";
         private static Socket Socket;
         private static int NumberOfPassedTests = 0;
@@ -16,6 +16,7 @@ namespace ImageProcessorStressTests
 
             for (int i = 0; i < NumberOfTests; i++)
             {
+                int numberOfTest = i;
                 UdpImageClient client = new UdpImageClient();
                 Console.WriteLine($"Запущена обработка {i}-го изображения");
                 client.GetProcessedImage(testImage, IpAddress, Socket, new Logger((msg) =>
@@ -23,7 +24,7 @@ namespace ImageProcessorStressTests
                     return;
                 }), () => 
                 {
-                    Console.WriteLine($"Обработано {i}-е изображение.");
+                    Console.WriteLine($"Обработано {numberOfTest}-е изображение.");
                     NumberOfPassedTests++;
                 });
 
