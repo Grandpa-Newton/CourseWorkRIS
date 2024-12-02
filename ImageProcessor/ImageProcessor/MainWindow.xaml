@@ -13,7 +13,7 @@
         <Image x:Name="ProcessedImage" HorizontalAlignment="Right" Height="797" Margin="0,113,64,0" VerticalAlignment="Top" Width="560"/>
         <Image x:Name="OpenedImage" HorizontalAlignment="Left" Height="797" Margin="64,113,0,0" VerticalAlignment="Top" Width="560"/>
         <Label Content="Исходное изображение" HorizontalAlignment="Left" Margin="141,28,0,0" VerticalAlignment="Top" Height="68" Width="440" FontSize="36" FontWeight="Bold"/>
-        <Label Content="Обработанное изображение" HorizontalAlignment="Right" Margin="0,37,79,0" VerticalAlignment="Top" Height="68" Width="527" FontSize="36" FontWeight="Bold"/>
+        <Label Content="Низкочастотный фильтр" HorizontalAlignment="Right" Margin="0,28,115,0" VerticalAlignment="Top" Height="68" Width="449" FontSize="36" FontWeight="Bold"/>
         <Label Content="Ip-адрес сервера" HorizontalAlignment="Center" Margin="0,161,0,0" VerticalAlignment="Top" FontSize="36" FontWeight="Bold"/>
         <Label Content="Информация" HorizontalAlignment="Center" Margin="0,846,0,0" VerticalAlignment="Top" Width="248" FontSize="36" FontWeight="Bold"/>
         <Label x:Name="infoLabel" Content="" HorizontalAlignment="Center" Margin="0,936,0,0" VerticalAlignment="Top" Width="1790" FontSize="16" HorizontalContentAlignment="Center" Height="108"/>
