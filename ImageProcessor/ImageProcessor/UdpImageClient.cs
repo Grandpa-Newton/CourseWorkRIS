@@ -9,7 +9,8 @@ namespace ImageProcessor
 {
     public class UdpImageClient
     {
-        public async Task<BitmapImage?> GetProcessedImage(Image sourceImage, string ipAddress, Socket? udpSocket, Logger logger, Action? finalCallback = null)
+        public async Task<BitmapImage?> GetProcessedImage(Image sourceImage, string ipAddress, Socket? udpSocket, Logger logger, float brightnessMultiplier,
+            Action? finalCallback = null)
         {
             byte[] data = ImageToByteArray(sourceImage);
             EndPoint endPoint;
@@ -48,14 +49,17 @@ namespace ImageProcessor
             {
                 int size = Math.Min(fragmentSize, data.Length - i * fragmentSize);
 
-                byte[] fragmentData = new byte[size + 8];
-                Array.Copy(data, i * fragmentSize, fragmentData, 8, size);
+                byte[] fragmentData = new byte[size + 12];
+                Array.Copy(data, i * fragmentSize, fragmentData, 12, size);
 
                 byte[] fragmentNumber = BitConverter.GetBytes(i);
                 Array.Copy(fragmentNumber, 0, fragmentData, 0, 4);
 
                 byte[] fragmentsNumberBytes = BitConverter.GetBytes(fragmentsNumber);
                 Array.Copy(fragmentsNumberBytes, 0, fragmentData, 4, 4);
+
+                byte[] brightnessBytes = BitConverter.GetBytes(brightnessMultiplier);
+                Array.Copy(brightnessBytes, 0, fragmentData, 8, 4);
 
                 try
                 {

@@ -7,7 +7,7 @@
         mc:Ignorable="d"
         Title="MainWindow" Height="1079.6" Width="1920">
     <Grid Width="1920" Height="1080">
-        <Button x:Name="SendMessageButton" Content="Отправить сообщение" HorizontalAlignment="Center" VerticalAlignment="Top" Width="608" Height="101" Click="SendMessageButton_Click" Margin="0,540,0,0" FontSize="36" FontWeight="Bold" Background="#FF4665E0"/>
+        <Button x:Name="SendMessageButton" Content="Отправить сообщение" HorizontalAlignment="Left" VerticalAlignment="Top" Width="608" Height="102" Click="SendMessageButton_Click" Margin="662,680,0,0" FontSize="36" FontWeight="Bold" Background="#FF4665E0"/>
         <TextBox x:Name="IpTextBox" HorizontalAlignment="Center" TextWrapping="Wrap" VerticalAlignment="Top" Width="602" Height="83" Margin="0,254,0,0" FontSize="36" Text="26.41.29.58" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"/>
         <Button x:Name="ChooseFileButton" Content="Выбрать файл" HorizontalAlignment="Center" VerticalAlignment="Top" Width="602" Height="101" Click="ChooseFileButton_Click" FontSize="36" FontWeight="Bold" Background="#FF4665E0" Margin="0,388,0,0"/>
         <Image x:Name="ProcessedImage" HorizontalAlignment="Right" Height="797" Margin="0,113,64,0" VerticalAlignment="Top" Width="560"/>
@@ -17,5 +17,7 @@
         <Label Content="Ip-адрес сервера" HorizontalAlignment="Center" Margin="0,161,0,0" VerticalAlignment="Top" FontSize="36" FontWeight="Bold"/>
         <Label Content="Информация" HorizontalAlignment="Center" Margin="0,846,0,0" VerticalAlignment="Top" Width="248" FontSize="36" FontWeight="Bold"/>
         <Label x:Name="infoLabel" Content="" HorizontalAlignment="Center" Margin="0,936,0,0" VerticalAlignment="Top" Width="1790" FontSize="16" HorizontalContentAlignment="Center" Height="108"/>
+        <Slider x:Name="slider" HorizontalAlignment="Left" Margin="659,514,0,0" VerticalAlignment="Top" Width="605" Height="26" Minimum="0.01" Maximum="5" VerticalContentAlignment="Center" RenderTransformOrigin="0.51,0.198" Cursor="Arrow" Value="{Binding ElementName=textBox, Path=Text, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+        <TextBox x:Name="brightnessText" HorizontalAlignment="Left" TextWrapping="Wrap" VerticalAlignment="Top" Width="602" Height="83" Margin="662,557,0,0" FontSize="36" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Text="{Binding ElementName=slider, Path=Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PreviewTextInput="TextBox_PreviewTextInput" Cursor="Arrow"/>
     </Grid>
 </Window>

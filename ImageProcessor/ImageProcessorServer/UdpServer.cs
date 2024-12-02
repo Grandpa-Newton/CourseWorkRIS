@@ -55,8 +55,9 @@ public class UdpServer
     {
         int fragmentNumber = BitConverter.ToInt32(buffer, 0);
         int fragmentsNumber = BitConverter.ToInt32(buffer, 4);
-        byte[] fragmentData = new byte[receivedBytes - 8];
-        Array.Copy(buffer, 8, fragmentData, 0, receivedBytes-8);
+        float brigthnessMultiplier = BitConverter.ToSingle(buffer, 8);
+        byte[] fragmentData = new byte[receivedBytes - 12];
+        Array.Copy(buffer, 12, fragmentData, 0, receivedBytes-12);
 
         if (!receivedFragments.ContainsKey(remoteEndPoint))
         {
@@ -71,19 +72,19 @@ public class UdpServer
         if ((receivedFragments[remoteEndPoint].Count == fragmentsToExpect[remoteEndPoint]))
         {
             byte[] fullImageData = CombineFragments(receivedFragments[remoteEndPoint]);
-            ProcessFullImage(fullImageData, receivedBytes - 8, remoteEndPoint);
+            ProcessFullImage(fullImageData, brigthnessMultiplier, remoteEndPoint);
             receivedFragments.Remove(remoteEndPoint, out _);
             fragmentsToExpect.Remove(remoteEndPoint, out _);
         }
     }
 
-    private async void ProcessFullImage(byte[] buffer, int receivedBytes, EndPoint remoteEndPoint)
+    private async void ProcessFullImage(byte[] buffer, float brigthnessMultiplier, EndPoint remoteEndPoint)
     {
         using (MemoryStream ms = new MemoryStream(buffer))
         {
             var image = Image.FromStream(ms);
 
-            Image processedImage = ApplyLowPassFilter(image);
+            Image processedImage = ApplyLowPassFilter(image, brigthnessMultiplier);
 
             using (MemoryStream outputMs = new MemoryStream())
             {
@@ -129,7 +130,7 @@ public class UdpServer
         }
     } 
 
-    private Image ApplyLowPassFilter(Image image)
+    private Image ApplyLowPassFilter(Image image, float brightnessMultiplier)
     {
         Stopwatch stopwatch = new Stopwatch();
 
@@ -139,14 +140,14 @@ public class UdpServer
         {
             var multiThreadApplyer = new LowPassFilterApplyer();
             stopwatch.Restart();
-            result = multiThreadApplyer.ApplyLowPassFilter(image, _threadsCount);
+            result = multiThreadApplyer.ApplyLowPassFilter(image, _threadsCount, brightnessMultiplier);
             Console.WriteLine($"Время, потраченное на обработку {_threadsCount} потоками: {stopwatch.ElapsedMilliseconds}");
         }
         else
         {
             var filterApplyer = new LowPassFilterApplyer();
             stopwatch.Start();
-            result = filterApplyer.ApplyLowPassFilter(image);
+            result = filterApplyer.ApplyLowPassFilter(image, brightnessMultiplier);
             Console.WriteLine($"Время, потраченное на обработку линейным способом: {stopwatch.ElapsedMilliseconds}");
         }
 

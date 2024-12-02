@@ -22,7 +22,7 @@ namespace ImageProcessorStressTests
                 client.GetProcessedImage(testImage, IpAddress, Socket, new Logger((msg) =>
                 {
                     return;
-                }), () => 
+                }), 1f, () => 
                 {
                     Console.WriteLine($"Обработано {numberOfTest}-е изображение.");
                     NumberOfPassedTests++;

@@ -6,6 +6,8 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Windows.Media.Imaging;
+using System.Globalization;
+using System.Windows.Input;
 
 namespace ImageProcessor
 {
@@ -24,6 +26,8 @@ namespace ImageProcessor
 
             this.WindowState = WindowState.Maximized;
 
+            slider.Value = 1;
+
             _logger = new Logger((message) =>
             {
                 Console.WriteLine(message);
@@ -33,15 +37,16 @@ namespace ImageProcessor
 
         private async void SendMessage()
         {
-            if(_currentImage == null)
+            if (_currentImage == null)
             {
                 _logger.Log("Для начала выберите изображение.");
                 return;
             }
 
-            var processedImage = await _udpClient.GetProcessedImage(_currentImage, IpTextBox.Text, _udpSocket, _logger);
+            var processedImage = await _udpClient.GetProcessedImage(_currentImage, IpTextBox.Text, _udpSocket, _logger, 
+                float.Parse(brightnessText.Text, NumberStyles.Float, CultureInfo.InvariantCulture));
 
-            if(processedImage == null)
+            if (processedImage == null)
             {
                 return;
             }
@@ -74,7 +79,7 @@ namespace ImageProcessor
                 using MemoryStream ms = new MemoryStream();
                 ms.Position = 0;
                 _currentImage.Save(ms, ImageFormat.Jpeg);
-            
+
                 ms.Position = 0;
                 var bitmapImage = new BitmapImage();
                 bitmapImage.BeginInit();
@@ -83,6 +88,14 @@ namespace ImageProcessor
                 bitmapImage.EndInit();
 
                 OpenedImage.Source = bitmapImage;
+            }
+        }
+
+        private void TextBox_PreviewTextInput(object sender, TextCompositionEventArgs e)
+        {
+            if (!double.TryParse(e.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out double result))
+            {
+                e.Handled = true;
             }
         }
     }
