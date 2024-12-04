@@ -33,7 +33,9 @@ public class LowPassFilterApplyer
 
         Marshal.Copy(data.Scan0, buffer, 0, buffer.Length);
 
-        Calculate(0, _bitmapWidth, buffer, depth, data.Stride, brightnessFactor);
+        Calculate(0, _bitmapWidth, buffer, depth, data.Stride);
+
+        ChangeBrightness(0, _bitmapWidth, buffer, depth, data.Stride, brightnessFactor);
 
         Marshal.Copy(buffer, 0, data.Scan0, buffer.Length);
 
@@ -43,10 +45,8 @@ public class LowPassFilterApplyer
     }
 
     public void Calculate(int startIndex, int finishIndex,
-        byte[] buffer, int depth, int stride, float brightnessFactor)
+        byte[] buffer, int depth, int stride)
     {
-        var brightnessMultiplier = defaultMultiplier * brightnessFactor;
-
         var offset = _kernel.GetLength(0) / 2;
 
         for (int i = startIndex; i < finishIndex; i++)
@@ -70,9 +70,9 @@ public class LowPassFilterApplyer
 
                         int byteColorOffset = pl * stride + pk * depth;
 
-                        b += buffer[byteColorOffset] * _kernel[yFilter, xFilter] * brightnessMultiplier;
-                        g += buffer[byteColorOffset + 1] * _kernel[yFilter, xFilter] * brightnessMultiplier;
-                        r += buffer[byteColorOffset + 2] * _kernel[yFilter, xFilter] * brightnessMultiplier;
+                        b += buffer[byteColorOffset] * _kernel[yFilter, xFilter] * defaultMultiplier;
+                        g += buffer[byteColorOffset + 1] * _kernel[yFilter, xFilter] * defaultMultiplier;
+                        r += buffer[byteColorOffset + 2] * _kernel[yFilter, xFilter] * defaultMultiplier;
                     }
                 }
 
@@ -83,6 +83,23 @@ public class LowPassFilterApplyer
                 buffer[byteOffset + 2] = (byte)Normalize(r);
             }
         }
+    }
+
+    private void ChangeBrightness(int startIndex, int finishIndex, byte[] buffer, int depth, int stride, 
+        float brightnessFactor)
+    {
+        for (int i = startIndex; i < finishIndex; i++)
+        {
+            for (int j = 0; j < _bitmapHeight; j++)
+            {
+                int byteOffset = j * stride + i * depth;
+
+                buffer[byteOffset] = (byte)Normalize(buffer[byteOffset] * brightnessFactor);
+                buffer[byteOffset + 1] = (byte)Normalize(buffer[byteOffset + 1] * brightnessFactor);
+                buffer[byteOffset + 2] = (byte)Normalize(buffer[byteOffset + 2] * brightnessFactor);
+            }
+        }
+
     }
 
     public Image ApplyLowPassFilter(Image inputImage, int threadsCount, float brightnessFactor)
@@ -96,17 +113,35 @@ public class LowPassFilterApplyer
         var depth = Bitmap.GetPixelFormatSize(data.PixelFormat) / 8;
 
         var buffer = new byte[data.Stride * data.Height];
-        
+
         Marshal.Copy(data.Scan0, buffer, 0, buffer.Length);
-        
+
+        MakeMultiThreadBufferOperation(threadsCount, bitmap, data, depth, buffer, Calculate);
+
+        MakeMultiThreadBufferOperation(threadsCount, bitmap, data, depth, buffer, (start, finish, buffer, depth, stride) =>
+        {
+            ChangeBrightness(start, finish, buffer, depth, stride, brightnessFactor);
+        });
+
+        Marshal.Copy(buffer, 0, data.Scan0, buffer.Length);
+
+        bitmap.UnlockBits(data);
+
+        return bitmap;
+    }
+
+    private void MakeMultiThreadBufferOperation(int threadsCount, Bitmap bitmap, BitmapData data, int depth, byte[] buffer, 
+        Action<int, int, byte[], int, int> action)
+    {
+        _threadsFinished = 0;
+
         for (int i = 0, start = 0; i < threadsCount; i++)
         {
             var size = (bitmap.Width - i + threadsCount - 1) / threadsCount;
             var it = start;
 
-            ThreadPool.QueueUserWorkItem(_ =>
-            {
-                Calculate(it, it + size, buffer, depth, data.Stride, brightnessFactor);
+            ThreadPool.QueueUserWorkItem(_ => {
+                action(it, it + size, buffer, depth, data.Stride);
                 _threadsFinished++;
             });
 
@@ -117,13 +152,8 @@ public class LowPassFilterApplyer
         {
             // Wait
         }
-
-        Marshal.Copy(buffer, 0, data.Scan0, buffer.Length);
-
-        bitmap.UnlockBits(data);
-
-        return bitmap;
     }
+
 
     private int Normalize(double value)
     {
