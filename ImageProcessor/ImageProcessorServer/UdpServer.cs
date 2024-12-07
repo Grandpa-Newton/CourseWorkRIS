@@ -11,12 +11,14 @@ public class UdpServer
 {
     private const int Port = 8888;
     private Socket _server;
-    private int _threadsCount = 10;
+    private int _threadsCount = 3;
     private const bool IsMultiThread = true;
-
+    private const int MaxThreads = 14;
+    private SemaphoreSlim _semaphore;
     public UdpServer()
     {
         _server = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+        _semaphore = new SemaphoreSlim(IsMultiThread ? (int)(MaxThreads / (float)_threadsCount) : MaxThreads);
     }
 
     public void StartServer()
@@ -30,8 +32,19 @@ public class UdpServer
             byte[] buffer = new byte[65535];
             EndPoint remoteEndPoint = new IPEndPoint(IPAddress.Any, 0);
             int receivedBytes = _server.ReceiveFrom(buffer, ref remoteEndPoint);
-            
-            ThreadPool.QueueUserWorkItem(_ => ProcessImageData(buffer, receivedBytes, remoteEndPoint));
+
+            ThreadPool.QueueUserWorkItem(async _ =>
+            {
+                await _semaphore.WaitAsync();
+                try
+                {
+                    await ProcessImageData(buffer, receivedBytes, remoteEndPoint);
+                }
+                finally
+                {
+                    _semaphore.Release();
+                }
+            });
         }
     }
 
@@ -57,7 +70,7 @@ public class UdpServer
         int fragmentsNumber = BitConverter.ToInt32(buffer, 4);
         float brigthnessMultiplier = BitConverter.ToSingle(buffer, 8);
         byte[] fragmentData = new byte[receivedBytes - 12];
-        Array.Copy(buffer, 12, fragmentData, 0, receivedBytes-12);
+        Array.Copy(buffer, 12, fragmentData, 0, receivedBytes - 12);
 
         if (!receivedFragments.ContainsKey(remoteEndPoint))
         {
@@ -66,19 +79,19 @@ public class UdpServer
         }
 
         receivedFragments[remoteEndPoint].Add(fragmentData);
-        Console.WriteLine($"Получена часть {fragmentNumber+1} из {fragmentsNumber} от {remoteEndPoint}");
+        Console.WriteLine($"Получена часть {fragmentNumber + 1} из {fragmentsNumber} от {remoteEndPoint}");
         Console.WriteLine($"Количество фрагментов получено: {receivedFragments[remoteEndPoint].Count}");
 
         if ((receivedFragments[remoteEndPoint].Count == fragmentsToExpect[remoteEndPoint]))
         {
             byte[] fullImageData = CombineFragments(receivedFragments[remoteEndPoint]);
-            ProcessFullImage(fullImageData, brigthnessMultiplier, remoteEndPoint);
+            await ProcessFullImage(fullImageData, brigthnessMultiplier, remoteEndPoint);
             receivedFragments.Remove(remoteEndPoint, out _);
             fragmentsToExpect.Remove(remoteEndPoint, out _);
         }
     }
 
-    private async void ProcessFullImage(byte[] buffer, float brigthnessMultiplier, EndPoint remoteEndPoint)
+    private async Task ProcessFullImage(byte[] buffer, float brigthnessMultiplier, EndPoint remoteEndPoint)
     {
         using (MemoryStream ms = new MemoryStream(buffer))
         {
@@ -99,19 +112,19 @@ public class UdpServer
                     int size = Math.Min(fragmentSize, responseBytes.Length - i * fragmentSize);
 
                     byte[] fragmentData = new byte[size + 8];
-                    Array.Copy(responseBytes, i*fragmentSize, fragmentData, 8, size);
+                    Array.Copy(responseBytes, i * fragmentSize, fragmentData, 8, size);
 
                     byte[] fragmentNumber = BitConverter.GetBytes(i);
                     Array.Copy(fragmentNumber, 0, fragmentData, 0, 4);
 
                     byte[] fragmentsNumberBytes = BitConverter.GetBytes(fragmentsNumber);
                     Array.Copy(fragmentsNumberBytes, 0, fragmentData, 4, 4);
-                    
+
                     _server.SendTo(fragmentData, remoteEndPoint);
 
                     await Task.Delay(50);
                 }
-                
+
                 Console.WriteLine("Изображение обработано и отправлено обратно клиенту.");
             }
         }
@@ -128,7 +141,7 @@ public class UdpServer
 
             return ms.ToArray();
         }
-    } 
+    }
 
     private Image ApplyLowPassFilter(Image image, float brightnessMultiplier)
     {
@@ -136,11 +149,14 @@ public class UdpServer
 
         Image? result;
 
-        if (IsMultiThread) 
+        if (IsMultiThread)
         {
             var multiThreadApplyer = new LowPassFilterApplyer();
+
             stopwatch.Restart();
+
             result = multiThreadApplyer.ApplyLowPassFilter(image, _threadsCount, brightnessMultiplier);
+            
             Console.WriteLine($"Время, потраченное на обработку {_threadsCount} потоками: {stopwatch.ElapsedMilliseconds}");
         }
         else
